@@ -150,9 +150,11 @@ def plot_histogram_and_boxplot(df: pd.DataFrame, column: str, bins: int = 25) ->
 def plot_categorical_count(df: pd.DataFrame, column: str) -> None:
     plt.figure(figsize=(10, 5))
     order = df[column].value_counts().index
-    sns.countplot(data=df, x=column, order=order, palette="Blues_r")
+    ax = sns.countplot(data=df, x=column, order=order, hue=column, palette="Blues_r", legend=False)
     plt.title(f"Count Plot of {column}")
     plt.xticks(rotation=25, ha="right")
+    if ax.get_legend() is not None:
+        ax.get_legend().remove()
     save_current_figure(f"countplot_{column}.png")
 
 
@@ -182,9 +184,11 @@ def plot_pairplot(df: pd.DataFrame, columns: list[str], filename: str) -> None:
 
 def plot_grouped_boxplot(df: pd.DataFrame, x_col: str, y_col: str, filename: str) -> None:
     plt.figure(figsize=(11, 5))
-    sns.boxplot(data=df, x=x_col, y=y_col, palette="Set3")
+    ax = sns.boxplot(data=df, x=x_col, y=y_col, hue=x_col, palette="Set3", dodge=False)
     plt.title(f"{y_col} across {x_col}")
     plt.xticks(rotation=25, ha="right")
+    if ax.get_legend() is not None:
+        ax.get_legend().remove()
     save_current_figure(filename)
 
 
@@ -388,12 +392,18 @@ def main() -> None:
     log(report_lines, "Regression results:")
     log(report_lines, regression_results_df.round(6).to_string(index=False))
 
+    plot_df = test_df[["avg_watch_time_per_day"]].copy()
+    plot_df["actual_watch_hours"] = y_test_reg.to_numpy()
+    plot_df["predicted_watch_hours"] = simple_model.predict(test_df[["avg_watch_time_per_day"]])
+    plot_df = plot_df.sort_values(by="avg_watch_time_per_day")
+
     plt.figure(figsize=(7, 5))
-    sns.scatterplot(x=test_df["avg_watch_time_per_day"], y=y_test_reg, label="Actual", alpha=0.6)
-    sns.lineplot(x=test_df["avg_watch_time_per_day"], y=simple_model.predict(test_df[["avg_watch_time_per_day"]]), color="red", label="Predicted")
+    sns.scatterplot(data=plot_df, x="avg_watch_time_per_day", y="actual_watch_hours", label="Actual", alpha=0.6)
+    plt.plot(plot_df["avg_watch_time_per_day"], plot_df["predicted_watch_hours"], color="red", label="Predicted")
     plt.title("Simple Linear Regression Fit on Test Data")
     plt.xlabel("avg_watch_time_per_day")
     plt.ylabel("watch_hours")
+    plt.legend()
     save_current_figure("simple_linear_regression_fit.png")
 
     log_heading(report_lines, "Task 8 - Overfitting and Underfitting")
